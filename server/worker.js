@@ -1,4 +1,8 @@
 import { Worker } from 'bullmq';
+import { QdrantVectorStore } from "@langchain/qdrant";
+import { OpenAIEmbeddings } from "@langchain/openai";
+import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf"
+import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 
 const connection = {
     host : 'localhost',
@@ -8,10 +12,23 @@ const connection = {
 const worker = new Worker(
   'RAG-pdf',
   async (job) => {
-    // Will print { foo: 'bar'} for the first job
-    // and { qux: 'baz' } for the second.
+    const data = JSON.parse(job.data);
+
+    // load the pdf
+    const path = data.path;
+    const loader = new PDFLoader(path);
+    const docs = await loader.load()
+
+    // chunk
+    const textSplitter = new RecursiveCharacterTextSplitter({
+        chunkSize: 1000,
+        chunkOverlap: 200,
+    });
+    const splitDocs = await textSplitter.splitDocuments(docs);
+    console.log(`the number of docs are ${splitDocs.length}`);
+    console.log(splitDocs[0]);
+
     console.log(job.data);
-    
   },
   { connection },
 );
