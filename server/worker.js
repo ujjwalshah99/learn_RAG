@@ -1,8 +1,8 @@
 import { Worker } from 'bullmq';
 import { QdrantVectorStore } from "@langchain/qdrant";
-import { OpenAIEmbeddings } from "@langchain/openai";
 import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf"
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
+import { embeddings } from "./utils.js";
 
 const connection = {
     host : 'localhost',
@@ -26,9 +26,14 @@ const worker = new Worker(
     });
     const splitDocs = await textSplitter.splitDocuments(docs);
     console.log(`the number of docs are ${splitDocs.length}`);
-    console.log(splitDocs[0]);
 
-    console.log(job.data);
+    // store in qdrant
+    await QdrantVectorStore.fromDocuments(splitDocs, embeddings, {
+      url: process.env.QDRANT_URL || "http://localhost:6333",
+      collectionName: "pdf-docs",
+    });
+
+    console.log(`Stored ${splitDocs.length} chunks in Qdrant`);
   },
   { connection },
 );
